@@ -7,9 +7,17 @@ import axios from "axios";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
 import { toast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth-context";
+import { User } from "../types/interfaces";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -22,16 +30,16 @@ export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const { register, isAuthenticated } = useAuth();
-  
+
   const from = location.state?.from || "/events";
-  
+
   useEffect(() => {
     const checkAuth = async () => {
       if (isAuthenticated) {
         navigate(from, { replace: true });
       }
     };
-    
+
     checkAuth();
   }, [isAuthenticated, navigate, from]);
 
@@ -44,27 +52,40 @@ export default function Register() {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const handleRegister = async (role: User["role"]) => {
+    await form.trigger(); // Validate the form first
+    if (!form.formState.isValid) {
+      toast({
+        title: "Error de Validación",
+        description: "Por favor corrige los errores del formulario.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const values = form.getValues();
     setIsLoading(true);
     try {
-      const success = await register(values.name, values.email, values.password);
-      
+      const success = await register(
+        values.name,
+        values.email,
+        values.password,
+        role
+      );
+
       if (success) {
         navigate(from, { replace: true });
       }
     } catch (error) {
       console.error("Error de registro:", error);
-      
       let errorMessage = "Error al registrar usuario";
-      
       if (axios.isAxiosError(error) && error.response) {
         errorMessage = error.response.data?.message || errorMessage;
       }
-      
       toast({
         title: "Error de registro",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -78,9 +99,10 @@ export default function Register() {
           <h1 className="text-2xl font-bold">Event Booking App</h1>
           <p className="mt-2 text-gray-600">Crea una nueva cuenta</p>
         </div>
-        
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+            {" "}
             <FormField
               control={form.control}
               name="name"
@@ -88,13 +110,16 @@ export default function Register() {
                 <FormItem>
                   <FormLabel>Nombre</FormLabel>
                   <FormControl>
-                    <Input placeholder="Tu nombre" {...field} />
+                    <Input
+                      placeholder="Tu nombre"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
             <FormField
               control={form.control}
               name="email"
@@ -102,13 +127,17 @@ export default function Register() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="ejemplo@correo.com" {...field} />
+                    <Input
+                      type="email"
+                      placeholder="ejemplo@correo.com"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
             <FormField
               control={form.control}
               name="password"
@@ -116,23 +145,48 @@ export default function Register() {
                 <FormItem>
                   <FormLabel>Contraseña</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="contraseña123" {...field} />
+                    <Input
+                      type="password"
+                      placeholder="contraseña123"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Registrando..." : "Registrarse"}
-            </Button>
+            <div className="flex gap-4 pt-2">
+              <Button
+                type="button"
+                className="flex-1"
+                onClick={() => handleRegister("user")}
+                disabled={isLoading}
+              >
+                {isLoading ? "Registrando..." : "Registrarse como Usuario"}
+              </Button>
+              <Button
+                type="button"
+                className="flex-1"
+                variant="secondary"
+                onClick={() => handleRegister("admin")}
+                disabled={isLoading}
+              >
+                {isLoading ? "Registrando..." : "Registrarse como Admin"}
+              </Button>
+            </div>
           </form>
         </Form>
-        
+
         <div className="mt-4 text-center text-sm text-gray-600">
-          <p>¿Ya tienes una cuenta? <Link to="/login" className="text-blue-600 hover:underline">Inicia sesión</Link></p>
+          <p>
+            ¿Ya tienes una cuenta?{" "}
+            <Link to="/login" className="text-blue-600 hover:underline">
+              Inicia sesión
+            </Link>
+          </p>
         </div>
       </div>
     </div>
   );
-} 
+}
