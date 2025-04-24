@@ -4,7 +4,6 @@ import { EventsProvider } from './lib/events-context';
 import { Toaster } from './lib/toaster';
 import { routes } from './routes';
 
-// AppRoutes component to render the routes using useRoutes hook
 function AppRoutes() {
   const routeElements = useRoutes(routes);
   return routeElements;
